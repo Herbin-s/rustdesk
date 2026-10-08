@@ -4,6 +4,8 @@ mod headless_auth;
 mod headless_file_transfer;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod headless_terminal;
+#[cfg(any(test, not(target_os = "linux")))]
+mod audio_resampler;
 mod keyboard;
 #[cfg(target_os = "macos")]
 pub(crate) mod window_targeting;
@@ -27,6 +29,7 @@ mod rendezvous_mediator;
 pub use self::rendezvous_mediator::*;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod rdh_cli;
+mod rdh_features;
 /// cbindgen:ignore
 pub mod common;
 #[cfg(not(any(target_os = "ios")))]
@@ -55,10 +58,7 @@ mod custom_server;
 mod lang;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod port_forward;
-
-#[cfg(all(feature = "flutter", feature = "plugin_framework"))]
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-pub mod plugin;
+mod port_forward_mux;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod tray;

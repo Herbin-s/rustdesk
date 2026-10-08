@@ -8,7 +8,8 @@ use std::{
     },
 };
 
-use hbb_common::{fs, rendezvous_proto::ConnType};
+use base::fs;
+use hbb_common::rendezvous_proto::ConnType;
 
 use crate::{
     client::FileManager,
@@ -58,7 +59,7 @@ fn map_action<S: TransferSession>(session: &S, action: TransferAction) {
             is_remote,
         } => session.send_files(
             id,
-            hbb_common::fs::JobType::Generic as i32,
+            fs::JobType::Generic as i32,
             source,
             destination,
             0,
@@ -389,7 +390,7 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use hbb_common::fs::JobType;
+    use base::fs::JobType;
 
     use super::*;
 

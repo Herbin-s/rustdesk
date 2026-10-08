@@ -265,6 +265,75 @@ pub(crate) fn reload_from_disk() -> Result<WindowTargetingStatus, ConfigError> {
     RUNTIME.reload_from_path(&config_path()?)
 }
 
+pub(crate) fn enabled_on_disk() -> Result<bool, ConfigError> {
+    let path = config_path()?;
+    match fs::read_to_string(&path) {
+        Ok(text) => Ok(config::parse_user_config(&text)?.mode == WindowTargetingMode::Rules),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(true),
+        Err(error) => Err(ConfigError::new(format!(
+            "read {}: {error}",
+            path.display()
+        ))),
+    }
+}
+
+pub(crate) fn set_enabled_on_disk(enabled: bool) -> Result<(), ConfigError> {
+    let path = config_path()?;
+    let text = match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            config::DEFAULT_TEMPLATE.to_owned()
+        }
+        Err(error) => {
+            return Err(ConfigError::new(format!(
+                "read {}: {error}",
+                path.display()
+            )))
+        }
+    };
+    let replacement = replace_mode(&text, enabled)?;
+    crate::rdh_features::write_config(&path, &replacement).map_err(ConfigError::new)
+}
+
+fn replace_mode(text: &str, enabled: bool) -> Result<String, ConfigError> {
+    config::parse_user_config(text)?;
+    let mode = if enabled { "rules" } else { "passthrough" };
+    let mut offset = 0;
+    for line in text.split_inclusive('\n') {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('[') {
+            break;
+        }
+        if let Some((key, value)) = line.split_once('=') {
+            if matches!(key.trim(), "mode" | "\"mode\"" | "'mode'") {
+                let value_start = line.len() - value.len();
+                let leading_space = value.len() - value.trim_start().len();
+                let quoted = value.trim_start();
+                let quote = quoted.chars().next();
+                if !matches!(quote, Some('"' | '\'')) {
+                    break;
+                }
+                let quote = quote.unwrap_or('"');
+                if quoted.starts_with(&format!("{quote}{quote}{quote}")) {
+                    break;
+                }
+                if let Some(end) = quoted[1..].find(quote) {
+                    let start = offset + value_start + leading_space + 1;
+                    let end = start + end;
+                    let mut replacement = text.to_owned();
+                    replacement.replace_range(start..end, mode);
+                    config::parse_user_config(&replacement)?;
+                    return Ok(replacement);
+                }
+            }
+        }
+        offset += line.len();
+    }
+    Err(ConfigError::new(
+        "Cannot safely edit window-targeting mode; use a single-line mode assignment".to_owned(),
+    ))
+}
+
 pub(crate) fn handle_ipc_request(request: WindowTargetingRequest) -> WindowTargetingResponse {
     handle_ipc_request_with(request, status, reload_from_disk)
 }
@@ -967,6 +1036,32 @@ mod tests {
         assert!(!collected.get());
         assert!(!executed.get());
         assert_eq!(outcome.mode, WindowTargetingMode::Passthrough);
+    }
+
+    #[test]
+    fn settings_mode_switch_preserves_rules_diagnostics_and_bypasses_preprocessing() {
+        let text = concat!(
+            "# User config\nversion = 1\n mode = 'rules' # A/B baseline\n",
+            "diagnostics = true\n\n[[rules]]\nid = 'user.skip'\n",
+            "action = 'skip'\nbundle_ids = ['example.app']\nlayers = [0]\n"
+        );
+        let disabled = replace_mode(text, false).unwrap();
+        assert_eq!(disabled, text.replacen("'rules'", "'passthrough'", 1));
+        assert_eq!(replace_mode(&disabled, true).unwrap(), text);
+        let path = test_path("settings-mode");
+        crate::rdh_features::write_config(&path, &disabled).unwrap();
+        let state = RuntimeState::new_builtin();
+        state.reload_from_path(&path).unwrap();
+        let outcome = preprocess_with(
+            &state.snapshot(),
+            10,
+            20,
+            |_, _| panic!("disabled targeting must not collect candidates"),
+            |_, _, _| panic!("disabled targeting must not activate a window"),
+        );
+        assert_eq!(outcome.action, WindowTargetAction::ForwardOnly);
+        assert_eq!(state.status().mode, WindowTargetingMode::Passthrough);
+        assert!(state.status().diagnostics);
     }
 
     #[test]

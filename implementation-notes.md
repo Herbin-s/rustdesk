@@ -1,8 +1,10 @@
 # Implementation Notes
 
-## RustDesk-Herbin 1.4.9 baseline
+## RustDesk-Herbin 1.5.0 baseline
 
-- Upstream baseline: official RustDesk tag `1.4.9`.
+- Upstream baseline: official RustDesk tag `1.5.0`, commit
+  `fada664df7a294d1d1a9ca3e7cd3637069122f17`, integrated onto RDH revision 25
+  (`4edd6ffa45c56912ebdb0f53d4705cfc107576cf`).
 - Product identity remains isolated as `RustDesk-Herbin`, bundle ID
   `com.herbin.rustdesk`, URL scheme `rustdesk-herbin://`, and independent macOS
   config and launchd namespaces.
@@ -10,12 +12,44 @@
   product-name substitutions. Reinstalling the service unloads the current
   user agent and root daemon before rewriting and reloading them so launchd
   refreshes its code requirements after an application replacement.
+- The upstream `--write-plists` service entry applies RDH identity before
+  generating paths and uses the full RDH namespace. Stock automatic updates
+  remain excluded by the upstream custom-client gate.
+- Remove the one-time installer/uninstaller cleanup for the obsolete
+  `com.carriez.RustDesk-Herbin` and duplicated `RustDesk-Herbin-Herbin` jobs.
+  These are historical recovery paths, not supported application namespaces.
 - The abandoned Windows and macOS shortcut-remapping experiments have been
   removed. RDH now uses upstream keyboard handling without a custom keymap file,
   built-in remap, or compatibility fallback.
 
+## Explicit RDH feature controls
+
+- The macOS settings sidebar has a dedicated RDH enhancements page for window
+  targeting, the physical-footprint watchdog, headless terminal, and headless
+  file transfer. Missing preferences preserve the current enabled defaults.
+- Window targeting uses the existing `window-targeting.toml` mode as its single
+  source of truth. The switch preserves user rules and diagnostics, persists
+  `rules` or `passthrough`, and reloads the user server through local IPC. The
+  page distinguishes saved preference from the server's effective mode.
+- The other three switches are stored in namespace-isolated `rdh-features.toml`.
+  Invalid or unreadable feature settings fail closed with an actionable error.
+  The watchdog reads its switch before the existing daily decision, without
+  adding polling or restarting either service. Existing threshold zero/invalid
+  semantics remain disabled and custom thresholds remain intact.
+- Headless switches gate new local CLI invocations, return status 2 on disabled
+  use, and never turn a rejected command into a Flutter window. Existing sessions,
+  remote permissions, and CLI help/version discovery remain independent.
+- The page reports application failures and reads back authoritative state; a
+  saved checkbox is not evidence that a running server applied the setting.
+  Identity, signing, namespace isolation, and the management API boundary remain
+  fixed because they are required for safe coexistence and operation.
+
 ## macOS remote-click activation fix
 
+- The user observed normal window switching with official 1.5.0 at both ends.
+  Finder/Dock transient surfaces and SecurityAgent have not yet been accepted,
+  so retain the existing targeting patch and its passthrough A/B mode until
+  that matrix establishes which behavior can be removed.
 - The controlled Mac resolves the visible application under the cursor before a
   remote left-button-down event and asks AppKit to activate regular applications.
 - A precisely identified `com.apple.SecurityAgent` accessory window is the sole
@@ -32,6 +66,9 @@
 ## Build and distribution
 
 - macOS builds remain CI-first through `.github/workflows/codex-macos-herbin.yml`.
+- The 1.5.0 candidate uses the macOS 15 ARM runner because macOS 14 retirement
+  brownouts have begun. Native dependencies follow the official 1.5.0 vcpkg
+  baseline, CMake 4.3 and NASM 2.16.03; Rust 1.81 and Flutter 3.24.5 remain.
 - Until a Developer ID certificate is available, CI artifacts are ad-hoc signed,
   not notarized, and explicitly marked `installable=false`. The workflow proves
   build and signature integrity only; it does not produce the persistent-host
@@ -67,7 +104,7 @@
 
 ## macOS user-server memory recovery
 
-- The RDH `--server` now contains a low-frequency RSS watchdog with a 1 GiB default
+- The RDH `--server` contains a low-frequency physical-footprint watchdog with a 1 GiB default
   threshold. It is active only when the exact RDH launchd job is supervising the
   process.
 - Memory is checked once daily at 06:00 local time. This preserves the previous
@@ -82,6 +119,9 @@
   it explicitly instead of silently falling back.
 - This mitigates the long-running leak but does not identify or fix its allocation
   source; heap profiling remains a separate follow-up.
+- Upstream 1.5.0 supplies the `BackingScaleFactor` autorelease pool and cursor
+  cache limits. Keep containment pending a sustained installed-runtime check;
+  source integration does not establish that all memory growth is resolved.
 
 No public compatibility layer is retained for the removed shortcut mapping.
 
@@ -100,6 +140,9 @@ No public compatibility layer is retained for the removed shortcut mapping.
 
 ## macOS headless file transfer CLI
 
+- Both headless CLIs use the upstream 1.5.0 `base` crate for message types and
+  native file-transfer helpers. Rendezvous/authentication remain in
+  `hbb_common`; no RDH wire-protocol fork or compatibility shim is introduced.
 - `--file-transfer --headless` owns only the combined form before Flutter
   dispatch and transfers one regular file by `push` or `pull` through the native
   `FILE_TRANSFER` session and `FileManager` path.
@@ -112,4 +155,7 @@ No public compatibility layer is retained for the removed shortcut mapping.
   Push success requires native completion plus a remote regular-file/size
   postflight; real acceptance independently compares external SHA-256 values.
 
-Open questions: none
+Pending acceptance: candidate terminal and file-transfer sessions with old/new
+peers; external SHA-256 checks for push/pull; the official 1.5.0 special-window
+matrix; sustained macOS server physical footprint. Installation remains separate
+from source, CI, and offline artifact verification.

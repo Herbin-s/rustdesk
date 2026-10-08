@@ -4,7 +4,7 @@ use super::{
     TransferDirection,
 };
 use crate::headless_auth::AuthPrompt;
-use hbb_common::message_proto::FileType;
+use base::message_proto::FileType;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum TransferSignal {
@@ -359,7 +359,7 @@ impl TransferCoordinator {
     fn handle_files(
         &mut self,
         id: i32,
-        entries: Vec<hbb_common::message_proto::FileEntry>,
+        entries: Vec<base::message_proto::FileEntry>,
         path: String,
         is_local: bool,
         only_count: bool,
@@ -614,7 +614,7 @@ mod tests {
     use std::{path::PathBuf, time::UNIX_EPOCH};
 
     use crate::headless_auth::AuthPrompt;
-    use hbb_common::message_proto::{FileEntry, FileType};
+    use base::message_proto::{FileEntry, FileType};
 
     use super::*;
     use crate::headless_file_transfer::{completion::TransferCompletion, TransferDirection};

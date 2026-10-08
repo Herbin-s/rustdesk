@@ -16,7 +16,7 @@ rdh --capabilities
 支持本文全部命令的构建应输出类似：
 
 ```text
-RustDesk-Herbin 1.4.9-rdh.20
+RustDesk-Herbin 1.5.0-rdh.2
 ```
 
 以及：
@@ -30,6 +30,9 @@ RDH revision 是构建标识，不改变与 RDO peer 协商使用的 upstream
 应用版本。如果 `--version` 只输出 upstream 版本，或者
 `--capabilities` 打开 GUI、无响应或不包含所需能力，当前安装的是旧构建；
 不要继续尝试缺失的 headless 命令。
+
+上面的版本号是 1.5.0 候选示例，不代表已安装或已通过真实连接验收。
+升级后仍需验证终端、强制 relay、文件 push/pull 与外部 SHA-256 比较。
 
 不依赖 `rdh` 包装器时，可直接执行：
 
@@ -51,6 +54,15 @@ rdh --help file-transfer
 这些命令以及 `--version`、`--capabilities` 都在 AppKit/Flutter 启动前
 处理。未知 help topic 或不受支持的 headless 组合只向 stderr 输出诊断，
 返回状态 2，不打开 GUI。
+
+## RDH 功能开关
+
+macOS 设置中的“RDH 增强”页面分别控制无窗口终端和无窗口文件传输，默认
+保持启用。关闭后，新发起的对应 headless 命令会向 stderr 说明原因并返回
+状态 2，不会弹出 Flutter 窗口；已有会话和远端授权不受影响。
+
+内置帮助、版本与构建能力查询仍可使用。构建包含某项能力，不代表用户已在
+设置中启用它。修改设置后，以页面读回的状态和下一次命令结果为准。
 
 ## Headless terminal
 

@@ -24,6 +24,10 @@ pub(crate) fn run_cli(args: &[String]) -> i32 {
             2
         }
         HeadlessTerminalDispatch::Run(parsed) => {
+            if let Some(exit) = crate::rdh_features::headless_exit("headless-terminal") {
+                crate::rdh_cli::emit(&exit);
+                return exit.status;
+            }
             #[cfg(target_os = "macos")]
             {
                 runtime::run(parsed)
