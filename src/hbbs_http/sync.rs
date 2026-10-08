@@ -316,7 +316,7 @@ fn handle_config_options(config_options: HashMap<String, String>) {
 }
 
 #[cfg(test)]
-mod tests {
+mod management_sync_tests {
     use super::heartbeat_url_from_options;
 
     #[test]

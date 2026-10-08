@@ -145,7 +145,7 @@ jobs:
               --features flutter,hwcodec,unix-file-copy-paste,screencapturekit \
               -- --exact --nocapture
           MACOSX_DEPLOYMENT_TARGET=10.14 \
-            cargo test --locked --lib hbbs_http::sync::tests \
+            cargo test --locked --lib hbbs_http::sync \
               --features flutter,hwcodec,unix-file-copy-paste,screencapturekit \
               -- --nocapture
           MACOSX_DEPLOYMENT_TARGET=10.14 \
