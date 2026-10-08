@@ -14,7 +14,7 @@ use crate::{
 use flutter_rust_bridge::{StreamSink, SyncReturn};
 use hbb_common::{
     config::{self, LocalConfig, PeerConfig, PeerInfoSerde},
-    lazy_static, log,
+    lazy_static, log, tokio,
     rendezvous_proto::ConnType,
     ResultType,
 };
@@ -997,10 +997,13 @@ pub fn main_get_option(key: String) -> String {
     get_option(key)
 }
 
+// FRB 1.80 runs normal calls on plain workers; each entrypoint owns its IPC runtime.
+#[tokio::main(flavor = "current_thread")]
 pub async fn main_get_rdh_settings() -> String {
     crate::rdh_features::get_settings().await
 }
 
+#[tokio::main(flavor = "current_thread")]
 pub async fn main_set_rdh_feature(feature: String, enabled: bool) -> String {
     crate::rdh_features::set_feature(feature, enabled).await
 }
