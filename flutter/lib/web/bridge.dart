@@ -92,6 +92,13 @@ class CursorShape {
 }
 
 class RustdeskImpl {
+  Future<String> mainGetRdhSettings({dynamic hint}) =>
+      Future.error(UnsupportedError('RDH enhancements require macOS'));
+
+  Future<String> mainSetRdhFeature(
+          {required String feature, required bool enabled, dynamic hint}) =>
+      Future.error(UnsupportedError('RDH enhancements require macOS'));
+
   // The core answers through the callback, before callMethod returns.
   Future<CursorShape?> sessionGetCursorShape(
       {required UuidValue sessionId, required String id, dynamic hint}) {

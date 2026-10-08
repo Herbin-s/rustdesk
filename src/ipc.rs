@@ -365,6 +365,10 @@ pub enum Data {
     WindowTargetingRequest(crate::window_targeting::WindowTargetingRequest),
     #[cfg(target_os = "macos")]
     WindowTargetingResponse(crate::window_targeting::WindowTargetingResponse),
+    #[cfg(target_os = "macos")]
+    RdhFeatureStatusRequest,
+    #[cfg(target_os = "macos")]
+    RdhFeatureStatusResponse(crate::rdh_features::LiveFeatureStatus),
     NatType(Option<i32>),
     ConfirmedKey(Option<(Vec<u8>, Vec<u8>)>),
     RawMessage(Vec<u8>),
@@ -832,6 +836,11 @@ async fn handle(data: Data, stream: &mut Connection) {
         Data::WindowTargetingRequest(request) => {
             let response = crate::window_targeting::handle_ipc_request(request);
             allow_err!(stream.send(&Data::WindowTargetingResponse(response)).await);
+        }
+        #[cfg(target_os = "macos")]
+        Data::RdhFeatureStatusRequest => {
+            let response = crate::rdh_features::live_status();
+            allow_err!(stream.send(&Data::RdhFeatureStatusResponse(response)).await);
         }
         Data::SystemInfo(_) => {
             let info = format!(
@@ -1666,6 +1675,31 @@ pub(crate) async fn request_window_targeting(
             bail!("unexpected window-targeting IPC response type; expected WindowTargetingResponse")
         }
         None => bail!("window-targeting IPC closed before returning a response"),
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub(crate) async fn request_rdh_feature_status() -> ResultType<crate::rdh_features::LiveFeatureStatus> {
+    let mut connection = connect(1_000, "").await?;
+    connection.send(&Data::RdhFeatureStatusRequest).await?;
+    match connection.next_timeout(1_000).await? {
+        Some(Data::RdhFeatureStatusResponse(response)) => Ok(response),
+        _ => bail!("user-server did not return RDH feature status"),
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub(crate) async fn reload_window_targeting_async(
+) -> ResultType<crate::window_targeting::WindowTargetingResponse> {
+    let mut connection = connect(1_000, "").await?;
+    connection
+        .send(&Data::WindowTargetingRequest(
+            crate::window_targeting::WindowTargetingRequest::Reload,
+        ))
+        .await?;
+    match connection.next_timeout(1_000).await? {
+        Some(Data::WindowTargetingResponse(response)) => Ok(response),
+        _ => bail!("user-server did not return window-targeting reload status"),
     }
 }
 

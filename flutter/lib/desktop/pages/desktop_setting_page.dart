@@ -24,6 +24,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/login.dart';
+import 'rdh_settings_page.dart';
 
 const double _kTabWidth = 200;
 const double _kTabHeight = 42;
@@ -55,6 +56,7 @@ enum SettingsTabKey {
   display,
   account,
   printer,
+  rdhEnhancements,
   about,
 }
 
@@ -77,6 +79,7 @@ class DesktopSettingPage extends StatefulWidget {
         !bind.isDisableSettings() &&
         bind.mainGetBuildinOption(key: kOptionHideRemotePrinterSetting) != 'Y')
       SettingsTabKey.printer,
+    if (isMacOS && !bind.isDisableSettings()) SettingsTabKey.rdhEnhancements,
     SettingsTabKey.about,
   ];
 
@@ -212,6 +215,10 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           settingTabs
               .add(_TabInfo(tab, 'About', Icons.info_outline, Icons.info));
           break;
+        case SettingsTabKey.rdhEnhancements:
+          settingTabs.add(_TabInfo(
+              tab, 'RDH enhancements', Icons.tune_outlined, Icons.tune));
+          break;
       }
     }
     return settingTabs;
@@ -241,6 +248,14 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
           break;
         case SettingsTabKey.about:
           children.add(const _About());
+          break;
+        case SettingsTabKey.rdhEnhancements:
+          children.add(RdhSettingsPage(
+            readSettings: () => bind.mainGetRdhSettings(),
+            writeFeature: (feature, enabled) =>
+                bind.mainSetRdhFeature(feature: feature, enabled: enabled),
+            translateText: translate,
+          ));
           break;
       }
     }

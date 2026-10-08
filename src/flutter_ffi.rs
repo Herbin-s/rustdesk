@@ -997,6 +997,14 @@ pub fn main_get_option(key: String) -> String {
     get_option(key)
 }
 
+pub async fn main_get_rdh_settings() -> String {
+    crate::rdh_features::get_settings().await
+}
+
+pub async fn main_set_rdh_feature(feature: String, enabled: bool) -> String {
+    crate::rdh_features::set_feature(feature, enabled).await
+}
+
 pub fn main_get_option_sync(key: String) -> SyncReturn<String> {
     SyncReturn(get_option(key))
 }

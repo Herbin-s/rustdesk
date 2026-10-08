@@ -57,6 +57,27 @@ Custom keyboard mapping and high-volume mouse diagnostics must remain absent.
   continuity remain mandatory, including the new upstream `--write-plists` path.
 - Preserve the custom-client exclusion from the root automatic updater.
 
+## Switch RDH behavior for upstream comparison
+
+On macOS, open Settings -> RDH enhancements. The four switches default to the
+existing enabled behavior. Window targeting off saves `passthrough` and reloads
+that mode in the running user server; on restores `rules` without replacing user
+rules. Check the page's effective-state message before attributing a remote-click
+result to upstream. A disconnected or older server must not be presented as
+having applied a saved setting.
+
+The memory-watchdog switch gates the existing 06:00 decision and preserves the
+configured threshold. It does not restart services or add continuous polling;
+zero/invalid legacy thresholds still disable recovery. Headless terminal and
+file-transfer switches affect the next local CLI invocation only, not the peer's
+permissions or an already-running session.
+
+Keep the official rescue route available during remote window comparisons. Test
+the same regular windows, Finder/Dock transient UI, and authorization-dialog
+input with window targeting off and on, recording the effective mode alongside
+the observation. Feature controls do not toggle product identity, signing,
+configuration isolation, or the explicit management-API boundary.
+
 ## CLI discovery and fail-closed dispatch
 
 The operator-facing guide is [`docs/rdh-cli.md`](rdh-cli.md). Every macOS

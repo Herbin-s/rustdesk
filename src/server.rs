@@ -71,7 +71,7 @@ pub mod input_service {
 mod connection;
 mod login_failure_check;
 #[cfg(target_os = "macos")]
-mod memory_watchdog;
+pub(crate) mod memory_watchdog;
 pub(crate) mod port_forward_mux;
 pub mod display_service;
 #[cfg(windows)]

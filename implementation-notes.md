@@ -22,6 +22,28 @@
   removed. RDH now uses upstream keyboard handling without a custom keymap file,
   built-in remap, or compatibility fallback.
 
+## Explicit RDH feature controls
+
+- The macOS settings sidebar has a dedicated RDH enhancements page for window
+  targeting, the physical-footprint watchdog, headless terminal, and headless
+  file transfer. Missing preferences preserve the current enabled defaults.
+- Window targeting uses the existing `window-targeting.toml` mode as its single
+  source of truth. The switch preserves user rules and diagnostics, persists
+  `rules` or `passthrough`, and reloads the user server through local IPC. The
+  page distinguishes saved preference from the server's effective mode.
+- The other three switches are stored in namespace-isolated `rdh-features.toml`.
+  Invalid or unreadable feature settings fail closed with an actionable error.
+  The watchdog reads its switch before the existing daily decision, without
+  adding polling or restarting either service. Existing threshold zero/invalid
+  semantics remain disabled and custom thresholds remain intact.
+- Headless switches gate new local CLI invocations, return status 2 on disabled
+  use, and never turn a rejected command into a Flutter window. Existing sessions,
+  remote permissions, and CLI help/version discovery remain independent.
+- The page reports application failures and reads back authoritative state; a
+  saved checkbox is not evidence that a running server applied the setting.
+  Identity, signing, namespace isolation, and the management API boundary remain
+  fixed because they are required for safe coexistence and operation.
+
 ## macOS remote-click activation fix
 
 - The user observed normal window switching with official 1.5.0 at both ends.

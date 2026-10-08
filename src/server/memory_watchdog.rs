@@ -1,6 +1,14 @@
 use chrono::{Local, Timelike};
 use hbb_common::{config::Config, log};
-use std::{io, sync::Once, thread, time::Duration};
+use std::{
+    io,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Once,
+    },
+    thread,
+    time::Duration,
+};
 
 const THRESHOLD_OPTION: &str = "rdh-memory-restart-threshold-mib";
 const DEFAULT_THRESHOLD_MIB: u64 = 1024;
@@ -35,6 +43,7 @@ extern "C" {
 }
 
 static START: Once = Once::new();
+static ACTIVE_THRESHOLD: AtomicU64 = AtomicU64::new(0);
 
 pub fn start() {
     START.call_once(|| {
@@ -47,13 +56,55 @@ pub fn start() {
             return;
         };
 
-        if let Err(err) = thread::Builder::new()
+        match thread::Builder::new()
             .name("rdh-memory-watchdog".to_owned())
             .spawn(move || run(threshold_bytes))
         {
-            log::error!("Failed to start RDH memory watchdog: {err}");
+            Ok(_) => ACTIVE_THRESHOLD.store(threshold_bytes, Ordering::Relaxed),
+            Err(err) => log::error!("Failed to start RDH memory watchdog: {err}"),
         }
     });
+}
+
+pub(crate) fn feature_status() -> (bool, String) {
+    match crate::rdh_features::memory_watchdog_enabled() {
+        Ok(false) => return (false, "disabled".to_owned()),
+        Err(_) => return (false, "invalid-preferences".to_owned()),
+        Ok(true) => {}
+    }
+    if !is_launchd_supervised() {
+        return (false, "not-supervised".to_owned());
+    }
+    if ACTIVE_THRESHOLD.load(Ordering::Relaxed) > 0 {
+        return (true, String::new());
+    }
+    let raw = Config::get_option(THRESHOLD_OPTION);
+    let threshold_active = raw.trim().is_empty()
+        || raw
+            .trim()
+            .parse::<u64>()
+            .ok()
+            .and_then(|mib| mib.checked_mul(MIB))
+            .map_or(false, |bytes| bytes > 0);
+    (
+        false,
+        if threshold_active {
+            "watchdog-unavailable"
+        } else {
+            "threshold-disabled"
+        }
+        .to_owned(),
+    )
+}
+
+fn preference_allows_check() -> bool {
+    match crate::rdh_features::memory_watchdog_enabled() {
+        Ok(enabled) => enabled,
+        Err(error) => {
+            log::error!("RDH memory watchdog skipped: {error}");
+            false
+        }
+    }
 }
 
 fn is_launchd_supervised() -> bool {
@@ -90,7 +141,7 @@ fn configured_threshold_bytes() -> Option<u64> {
     };
 
     log::info!(
-        "RDH memory watchdog enabled: threshold={} MiB, daily_check={:02}:00, unattended_window={:02}:00-{:02}:00",
+        "RDH memory watchdog scheduled: threshold={} MiB, daily_check={:02}:00, unattended_window={:02}:00-{:02}:00",
         threshold_mib,
         DAILY_CHECK_HOUR,
         UNATTENDED_WINDOW_START_HOUR,
@@ -115,6 +166,10 @@ fn run(threshold_bytes: u64) {
             continue;
         }
 
+        if !preference_allows_check() {
+            continue;
+        }
+
         let footprint_bytes = match current_phys_footprint_bytes() {
             Ok(bytes) => bytes,
             Err(err) => {
@@ -125,7 +180,16 @@ fn run(threshold_bytes: u64) {
             }
         };
 
-        if footprint_bytes >= threshold_bytes {
+        let enabled = preference_allows_check();
+        if !enabled {
+            continue;
+        }
+        if should_restart(
+            enabled,
+            Local::now().hour(),
+            footprint_bytes,
+            threshold_bytes,
+        ) {
             log::error!(
                 "RDH memory watchdog restarting over-limit --server during unattended window: phys_footprint={} MiB; active connections intentionally ignored; launchd will relaunch it",
                 footprint_bytes / MIB
@@ -139,6 +203,10 @@ fn run(threshold_bytes: u64) {
             threshold_bytes / MIB
         );
     }
+}
+
+fn should_restart(enabled: bool, hour: u32, footprint_bytes: u64, threshold_bytes: u64) -> bool {
+    enabled && is_unattended_window(hour) && footprint_bytes >= threshold_bytes
 }
 
 fn seconds_until_next_check(now_seconds: u32) -> u64 {
@@ -169,6 +237,14 @@ fn current_phys_footprint_bytes() -> io::Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn disabled_preference_cannot_restart_an_over_limit_server() {
+        assert!(should_restart(true, 6, 2048 * MIB, 1024 * MIB));
+        assert!(!should_restart(false, 6, 2048 * MIB, 1024 * MIB));
+        assert!(!should_restart(true, 7, 2048 * MIB, 1024 * MIB));
+        assert!(!should_restart(true, 6, 1023 * MIB, 1024 * MIB));
+    }
 
     #[test]
     fn rusage_info_v0_layout_matches_macos_abi() {

@@ -29,6 +29,7 @@ mod rendezvous_mediator;
 pub use self::rendezvous_mediator::*;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod rdh_cli;
+mod rdh_features;
 /// cbindgen:ignore
 pub mod common;
 #[cfg(not(any(target_os = "ios")))]
