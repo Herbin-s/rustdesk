@@ -2,7 +2,8 @@ use super::completion::TransferCompletion;
 use crate::{
     client::QualityStatus, headless_auth::AuthPrompt, ui_session_interface::InvokeUiSession,
 };
-use hbb_common::{log, message_proto::*, rendezvous_proto::ConnType};
+use base::message_proto::*;
+use hbb_common::{log, rendezvous_proto::ConnType};
 #[cfg(all(feature = "vram", feature = "flutter"))]
 use std::ffi::c_void;
 use std::sync::{mpsc::Sender, Arc, Mutex};
@@ -291,10 +292,8 @@ impl InvokeUiSession for HeadlessFileTransferHandler {
 mod tests {
     use super::{HeadlessFileTransferEvent, HeadlessFileTransferHandler};
     use crate::{client::QualityStatus, ui_session_interface::InvokeUiSession};
-    use hbb_common::{
-        message_proto::{FileEntry, PeerInfo},
-        rendezvous_proto::ConnType,
-    };
+    use base::message_proto::{FileEntry, PeerInfo};
+    use hbb_common::rendezvous_proto::ConnType;
     use std::sync::mpsc::{self, Receiver, TryRecvError};
 
     fn handler() -> (

@@ -6,7 +6,7 @@ on:
       source_ref:
         description: Branch or tag containing the RDH candidate source
         required: true
-        default: "master"
+        default: "rdh/candidate-1.5.0"
       rdh_revision:
         description: RDH revision for this upstream version
         required: true
@@ -18,13 +18,15 @@ permissions:
 env:
   FLUTTER_VERSION: "3.24.5"
   FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
+  CARGO_EXPAND_VERSION: "1.0.95"
   MAC_RUST_VERSION: "1.81"
-  VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
+  VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
+  VCPKG_CMAKE_VERSION: "4.3.0"
 
 jobs:
   build-macos-herbin:
     name: build macOS aarch64 RustDesk-Herbin
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
@@ -60,7 +62,26 @@ jobs:
 
       - name: Install build runtime
         run: |
-          brew install llvm create-dmg nasm pkg-config
+          test "$(uname -m)" = "arm64"
+          brew install llvm create-dmg pkg-config
+
+      - name: Install CMake for vcpkg
+        run: |
+          # The 1.5.0 vcpkg baseline uses CMake 4.3+ SPDX string operations.
+          python3 -m venv "$RUNNER_TEMP/rdh-cmake"
+          "$RUNNER_TEMP/rdh-cmake/bin/python" -m pip install "cmake==${VCPKG_CMAKE_VERSION}"
+          "$RUNNER_TEMP/rdh-cmake/bin/cmake" --version
+          echo "$RUNNER_TEMP/rdh-cmake/bin" >> "$GITHUB_PATH"
+
+      - name: Install NASM 2.16.03
+        run: |
+          # Match upstream's native build tools; Homebrew NASM 3.x is incompatible.
+          curl --fail --location \
+            https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip \
+            --output "$RUNNER_TEMP/nasm-2.16.03-macosx.zip"
+          unzip "$RUNNER_TEMP/nasm-2.16.03-macosx.zip" -d "$RUNNER_TEMP"
+          "$RUNNER_TEMP/nasm-2.16.03/nasm" --version
+          echo "$RUNNER_TEMP/nasm-2.16.03" >> "$GITHUB_PATH"
 
       - name: Install Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
@@ -94,6 +115,7 @@ jobs:
 
       - name: Install Flutter Rust Bridge
         run: |
+          cargo install cargo-expand --version "${CARGO_EXPAND_VERSION}" --locked
           cargo install flutter_rust_bridge_codegen --version "${FLUTTER_RUST_BRIDGE_VERSION}" --features uuid --locked
           pushd flutter
           flutter pub get

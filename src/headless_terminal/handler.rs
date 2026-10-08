@@ -1,7 +1,8 @@
 use crate::{
     client::QualityStatus, headless_auth::AuthPrompt, ui_session_interface::InvokeUiSession,
 };
-use hbb_common::{log, message_proto::*, rendezvous_proto::ConnType};
+use base::message_proto::*;
+use hbb_common::{log, rendezvous_proto::ConnType};
 #[cfg(all(feature = "vram", feature = "flutter"))]
 use std::ffi::c_void;
 use std::sync::{mpsc::Sender, Arc, Mutex};
@@ -219,7 +220,7 @@ impl InvokeUiSession for HeadlessTerminalHandler {
     fn handle_screenshot_resp(&self, _session_id: String, _message: String) {}
 
     fn handle_terminal_response(&self, response: TerminalResponse) {
-        use hbb_common::message_proto::terminal_response::Union;
+        use base::message_proto::terminal_response::Union;
 
         let event = match response.union {
             Some(Union::Opened(opened)) => Some(HeadlessEvent::Opened {
@@ -267,13 +268,11 @@ impl InvokeUiSession for HeadlessTerminalHandler {
 mod tests {
     use super::*;
     use crate::{client::QualityStatus, ui_session_interface::InvokeUiSession};
-    use hbb_common::{
-        message_proto::{
-            terminal_response::Union, TerminalClosed, TerminalData, TerminalError, TerminalOpened,
-            TerminalResponse,
-        },
-        rendezvous_proto::ConnType,
+    use base::message_proto::{
+        terminal_response::Union, TerminalClosed, TerminalData, TerminalError, TerminalOpened,
+        TerminalResponse,
     };
+    use hbb_common::rendezvous_proto::ConnType;
     use std::{
         sync::mpsc::{self, Receiver, TryRecvError},
         time::Duration,

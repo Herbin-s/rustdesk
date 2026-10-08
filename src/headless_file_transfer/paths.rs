@@ -4,7 +4,7 @@ use std::{
     time::SystemTime,
 };
 
-use hbb_common::message_proto::{FileEntry, FileType};
+use base::message_proto::{FileEntry, FileType};
 
 use super::HeadlessFileTransferError;
 
@@ -177,7 +177,7 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use hbb_common::message_proto::{FileEntry, FileType};
+    use base::message_proto::{FileEntry, FileType};
 
     use super::{
         inspect_pull_destination, inspect_push_source, single_regular_file_size,

@@ -16,7 +16,7 @@ rdh --capabilities
 支持本文全部命令的构建应输出类似：
 
 ```text
-RustDesk-Herbin 1.4.9-rdh.20
+RustDesk-Herbin 1.5.0-rdh.1
 ```
 
 以及：
@@ -30,6 +30,9 @@ RDH revision 是构建标识，不改变与 RDO peer 协商使用的 upstream
 应用版本。如果 `--version` 只输出 upstream 版本，或者
 `--capabilities` 打开 GUI、无响应或不包含所需能力，当前安装的是旧构建；
 不要继续尝试缺失的 headless 命令。
+
+上面的版本号是 1.5.0 候选示例，不代表已安装或已通过真实连接验收。
+升级后仍需验证终端、强制 relay、文件 push/pull 与外部 SHA-256 比较。
 
 不依赖 `rdh` 包装器时，可直接执行：
 

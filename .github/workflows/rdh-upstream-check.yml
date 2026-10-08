@@ -3,6 +3,10 @@ name: RDH Upstream Upgrade Check
 on:
   workflow_dispatch:
     inputs:
+      source_ref:
+        description: Branch or tag containing the RDH baseline to rehearse
+        required: true
+        default: "rdh/candidate-1.5.0"
       upstream_tag:
         description: Official RustDesk tag; leave empty to use the latest stable release
         required: false
@@ -25,6 +29,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
+          ref: ${{ inputs.source_ref || 'rdh/candidate-1.5.0' }}
           submodules: false
 
       - name: Resolve target release
@@ -43,6 +48,7 @@ jobs:
 
       - name: Verify current RDH invariants
         run: |
+          python3 tests/test_macos_signing_promotion.py
           python3 tests/test_herbin_branding.py
           git diff --check
           git diff --cached --check
@@ -77,6 +83,7 @@ jobs:
       - name: Verify merged candidate invariants
         if: env.TARGET_TAG != env.CURRENT_VERSION
         run: |
+          python3 tests/test_macos_signing_promotion.py
           python3 tests/test_herbin_branding.py
           git diff --check
           git diff --cached --check

@@ -416,7 +416,6 @@ def assert_headless_file_transfer_ci_and_docs_contract(
         assert status in upgrade_runbook
 
     assert "## macOS headless file transfer CLI" in implementation_notes
-    assert "Open questions: none" in implementation_notes
 
 
 def assert_management_sync_ci_and_docs_contract(
@@ -676,7 +675,7 @@ def main() -> None:
     file_state_rs = read("src/headless_file_transfer/state.rs")
     headless_auth_rs = read("src/headless_auth.rs")
     ui_session_interface_rs = read("src/ui_session_interface.rs")
-    message_proto = read("libs/hbb_common/protos/message.proto")
+    message_proto = read("libs/base/protos/message.proto")
     service_rs = read("src/service.rs")
     keyboard_rs = read("src/keyboard.rs")
     input_service_rs = read("src/server/input_service.rs")
@@ -924,10 +923,19 @@ def main() -> None:
     assert 'launchctl bootstrap gui/$uid ' in mac_install_script
     assert 'launchctl kickstart -k gui/$uid/$agent_label' in mac_install_script
     assert_install_reloads_current_launchd_jobs(mac_install_script)
-    assert "legacy_agent_plist" in mac_install_script
-    assert "bad_agent_plist" in mac_install_script
-    assert "legacy_daemon_plist" in mac_update_script
-    assert "bad_daemon_plist" in mac_update_script
+    for script in (mac_install_script, mac_update_script):
+        assert "legacy_agent_plist" not in script
+        assert "bad_agent_plist" not in script
+    write_plists = macos_rs.split("pub fn write_plists()", 1)[1].split(
+        "pub fn uninstall_service", 1
+    )[0]
+    assert '"/Library/LaunchDaemons/{}_service.plist"' in write_plists
+    assert '"/Library/LaunchAgents/{}_server.plist"' in write_plists
+    assert "crate::get_full_name()" in write_plists
+    assert "com.carriez" not in write_plists
+    assert_in_order(service_rs, "apply_fork_identity();", 'args[1] == "--write-plists"')
+    root_update = read("src/updater.rs").split("pub fn check_update_as_root()", 1)[1]
+    assert "if crate::is_custom_client()" in root_update
 
     for packaging_file in (build_py, osx_dist, macos_workflow):
         assert "RustDesk-Herbin.app" in packaging_file

@@ -40,6 +40,23 @@ preprocessing and must not add file watching or private window APIs.
 
 Custom keyboard mapping and high-volume mouse diagnostics must remain absent.
 
+## 1.5.0 integration decisions
+
+- Integrate official tag `1.5.0` (`fada664`) onto the complete rdh.25 source
+  (`4edd6ffa`), not the fork's old build-workflow `master` branch.
+- Keep both headless CLIs, their CLI discovery gate, saved credentials, relay,
+  terminal persistence, byte fidelity, transfer completion and no-overwrite
+  contracts. Client message types and file helpers now belong to `base`.
+- Official 1.5.0 passed the user's preliminary ordinary-window switching check
+  at both ends. Finder popovers, Dock menus and SecurityAgent remain unverified;
+  retain window targeting until the special-window matrix passes.
+- Keep the physical-footprint watchdog until sustained runtime observation
+  establishes whether upstream autorelease/cursor-cache fixes are sufficient.
+- Remove obsolete installation cleanup for historic malformed RDH service
+  names. Current RDH service unloading, namespace isolation and signing
+  continuity remain mandatory, including the new upstream `--write-plists` path.
+- Preserve the custom-client exclusion from the root automatic updater.
+
 ## CLI discovery and fail-closed dispatch
 
 The operator-facing guide is [`docs/rdh-cli.md`](rdh-cli.md). Every macOS
@@ -205,16 +222,22 @@ The existing checkout may contain valuable untracked files. Do not clean, reset,
 restore, or switch it. Start only when `git status --porcelain` has been reviewed.
 
 ```bash
-REPO="$HOME/Develop/my-rustdesk-win"
-TARGET_TAG="1.4.10"
+PROJECT_ROOT="/Volumes/DevData/Development/RustDesk-Herbin"
+REPO="$PROJECT_ROOT/source"
+TARGET_TAG="1.5.0"
+RDH_BASE="4edd6ffa45c56912ebdb0f53d4705cfc107576cf"
 CANDIDATE_BRANCH="rdh/candidate-${TARGET_TAG}"
-WORKTREE="$HOME/.config/superpowers/worktrees/rustdesk/rdh-${TARGET_TAG}"
+WORKTREE="$PROJECT_ROOT/worktrees/rdh-${TARGET_TAG}"
 
-git -C "$REPO" fetch origin "+refs/tags/${TARGET_TAG}:refs/tags/${TARGET_TAG}"
-git -C "$REPO" fetch fork master
-git -C "$REPO" worktree add -b "$CANDIDATE_BRANCH" "$WORKTREE" fork/master
+git -C "$REPO" fetch origin "refs/tags/${TARGET_TAG}:refs/tags/${TARGET_TAG}"
+git -C "$REPO" fetch fork fix/disable-implicit-management-sync
+git -C "$REPO" worktree add -b "$CANDIDATE_BRANCH" "$WORKTREE" "$RDH_BASE"
 git -C "$WORKTREE" merge --no-ff "$TARGET_TAG"
+git -C "$WORKTREE" submodule update --init --recursive
 ```
+
+For a later upgrade, resolve `RDH_BASE` to the latest verified complete RDH
+source first; the values above describe the 1.5.0 upgrade baseline.
 
 Resolve conflicts by preserving current upstream behavior first, then reapplying
 the patch contract above. Never recover an entire conflicted input or keyboard file
@@ -231,6 +254,7 @@ git -C "$WORKTREE" diff "${TARGET_TAG}..HEAD" -- path/to/file
 
 ```bash
 cd "$WORKTREE"
+source "$PROJECT_ROOT/tools/devdata-env.zsh"
 python3 tests/test_herbin_branding.py
 git diff --check
 git diff --stat "$TARGET_TAG..HEAD"
@@ -281,10 +305,13 @@ Do not install local build dependencies. Dispatch the candidate workflow:
 ```bash
 gh workflow run codex-macos-herbin.yml \
   --repo Herbin-s/rustdesk \
-  --ref master \
+  --ref "$CANDIDATE_BRANCH" \
   -f source_ref="$CANDIDATE_BRANCH" \
   -f rdh_revision=1
 ```
+
+Both the workflow revision (`--ref`) and `source_ref` must select the candidate;
+running the old workflow from `master` does not pick up upgraded build steps.
 
 Use `gh run list` and `gh run view --json status,conclusion,url` to inspect the
 result. The artifact contains the DMG, SHA-256 file, and build metadata. While RDH
