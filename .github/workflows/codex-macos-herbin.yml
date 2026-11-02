@@ -24,7 +24,7 @@ env:
 jobs:
   build-macos-herbin:
     name: build macOS aarch64 RustDesk-Herbin
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
